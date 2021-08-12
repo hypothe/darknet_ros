@@ -185,7 +185,7 @@ void YoloObjectDetector::cameraCallback(const sensor_msgs::ImageConstPtr& msg) {
 }
 
 void YoloObjectDetector::checkForObjectsActionGoalCB() {
-  ROS_DEBUG("[YoloObjectDetector] Start check for objects action.");
+  ROS_INFO("[YoloObjectDetector] Start check for objects action.");
 
   boost::shared_ptr<const darknet_ros_msgs::CheckForObjectsGoal> imageActionPtr = checkForObjectsActionServer_->acceptNewGoal();
   sensor_msgs::Image imageAction = imageActionPtr->image;
@@ -532,7 +532,7 @@ void* YoloObjectDetector::publishInThread() {
   // Publish image.
   cv::Mat cvImage = cv::cvarrToMat(ipl_);
   if (!publishDetectionImage(cv::Mat(cvImage))) {
-    ROS_DEBUG("Detection image has not been broadcasted.");
+    ROS_WARN("Detection image has not been broadcasted.");
   }
 
   // Publish bounding boxes and detection result.
