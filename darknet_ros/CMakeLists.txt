@@ -143,6 +143,7 @@ if (CUDA_FOUND)
 
   link_directories(
     ${CUDA_TOOLKIT_ROOT_DIR}/lib64
+    ${CUDA_TOOLKIT_ROOT_DIR}/lib64/stubs
   )
 
   cuda_add_library(${PROJECT_NAME}_lib
