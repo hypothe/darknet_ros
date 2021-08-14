@@ -12,29 +12,11 @@
 // Check for xServer
 #include <X11/Xlib.h>
 
-#ifdef DARKNET_FILE_PATH
-std::string darknetFilePath_ = DARKNET_FILE_PATH;
-#else
-#error Path of darknet repository is not defined in CMakeLists.txt.
-#endif
-
 namespace darknet_ros {
 
-char* cfg;
-char* weights;
-char* data;
-char** detectionNames;
-
 YoloObjectDetector::YoloObjectDetector(ros::NodeHandle nh)
-    : nodeHandle_(nh), imageTransport_(nodeHandle_), numClasses_(0), classLabels_(0), rosBoxes_(0), rosBoxCounter_(0) {
+    : YoloCommonHead(nh), imageTransport_(nodeHandle_) {
   ROS_INFO("[YoloObjectDetector] Node started.");
-
-  // Read parameters from config file.
-  if (!readParameters()) {
-    ros::requestShutdown();
-  }
-
-  init();
 }
 
 YoloObjectDetector::~YoloObjectDetector() {
@@ -60,58 +42,16 @@ bool YoloObjectDetector::readParameters() {
     viewImage_ = false;
   }
 
-  // Set vector sizes.
-  nodeHandle_.param("yolo_model/detection_classes/names", classLabels_, std::vector<std::string>(0));
-  numClasses_ = classLabels_.size();
-  rosBoxes_ = std::vector<std::vector<RosBox_> >(numClasses_);
-  rosBoxCounter_ = std::vector<int>(numClasses_);
+  YoloCommonHead::readParameters(); // Class and Labels params
 
   return true;
 }
 
 void YoloObjectDetector::init() {
   ROS_INFO("[YoloObjectDetector] init().");
+  
+  YoloCommonHead::init(); //-> set up common attributes
 
-  // Initialize deep network of darknet.
-  std::string weightsPath;
-  std::string configPath;
-  std::string dataPath;
-  std::string configModel;
-  std::string weightsModel;
-
-  // Threshold of object detection.
-  float thresh;
-  nodeHandle_.param("yolo_model/threshold/value", thresh, (float)0.3);
-
-  // Path to weights file.
-  nodeHandle_.param("yolo_model/weight_file/name", weightsModel, std::string("yolov2-tiny.weights"));
-  nodeHandle_.param("weights_path", weightsPath, std::string("/default"));
-  weightsPath += "/" + weightsModel;
-  weights = new char[weightsPath.length() + 1];
-  strcpy(weights, weightsPath.c_str());
-
-  // Path to config file.
-  nodeHandle_.param("yolo_model/config_file/name", configModel, std::string("yolov2-tiny.cfg"));
-  nodeHandle_.param("config_path", configPath, std::string("/default"));
-  configPath += "/" + configModel;
-  cfg = new char[configPath.length() + 1];
-  strcpy(cfg, configPath.c_str());
-
-  // Path to data folder.
-  dataPath = darknetFilePath_;
-  dataPath += "/data";
-  data = new char[dataPath.length() + 1];
-  strcpy(data, dataPath.c_str());
-
-  // Get classes.
-  detectionNames = (char**)realloc((void*)detectionNames, (numClasses_ + 1) * sizeof(char*));
-  for (int i = 0; i < numClasses_; i++) {
-    detectionNames[i] = new char[classLabels_[i].length() + 1];
-    strcpy(detectionNames[i], classLabels_[i].c_str());
-  }
-
-  // Load network.
-  setupNetwork(cfg, weights, data, thresh, detectionNames, numClasses_, 0, 0, 1, 0.5, 0, 0, 0, 0);
   yoloThread_ = std::thread(&YoloObjectDetector::yolo, this);
 
   // Initialize publisher and subscriber.
@@ -147,13 +87,6 @@ void YoloObjectDetector::init() {
   detectionImagePublisher_ =
       nodeHandle_.advertise<sensor_msgs::Image>(detectionImageTopicName, detectionImageQueueSize, detectionImageLatch);
 
-  // Action servers.
-  std::string checkForObjectsActionName;
-  nodeHandle_.param("actions/camera_reading/topic", checkForObjectsActionName, std::string("check_for_objects"));
-  checkForObjectsActionServer_.reset(new CheckForObjectsActionServer(nodeHandle_, checkForObjectsActionName, false));
-  checkForObjectsActionServer_->registerGoalCallback(boost::bind(&YoloObjectDetector::checkForObjectsActionGoalCB, this));
-  checkForObjectsActionServer_->registerPreemptCallback(boost::bind(&YoloObjectDetector::checkForObjectsActionPreemptCB, this));
-  checkForObjectsActionServer_->start();
 }
 
 void YoloObjectDetector::cameraCallback(const sensor_msgs::ImageConstPtr& msg) {
@@ -184,48 +117,6 @@ void YoloObjectDetector::cameraCallback(const sensor_msgs::ImageConstPtr& msg) {
   return;
 }
 
-void YoloObjectDetector::checkForObjectsActionGoalCB() {
-  ROS_INFO("[YoloObjectDetector] Start check for objects action.");
-
-  boost::shared_ptr<const darknet_ros_msgs::CheckForObjectsGoal> imageActionPtr = checkForObjectsActionServer_->acceptNewGoal();
-  sensor_msgs::Image imageAction = imageActionPtr->image;
-
-  cv_bridge::CvImagePtr cam_image;
-
-  try {
-    cam_image = cv_bridge::toCvCopy(imageAction, sensor_msgs::image_encodings::BGR8);
-  } catch (cv_bridge::Exception& e) {
-    ROS_ERROR("cv_bridge exception: %s", e.what());
-    return;
-  }
-
-  if (cam_image) {
-    {
-      boost::unique_lock<boost::shared_mutex> lockImageCallback(mutexImageCallback_);
-      camImageCopy_ = cam_image->image.clone();
-    }
-    {
-      boost::unique_lock<boost::shared_mutex> lockImageCallback(mutexActionStatus_);
-      actionId_ = imageActionPtr->id;
-    }
-    {
-      boost::unique_lock<boost::shared_mutex> lockImageStatus(mutexImageStatus_);
-      imageStatus_ = true;
-    }
-    frameWidth_ = cam_image->image.size().width;
-    frameHeight_ = cam_image->image.size().height;
-  }
-  return;
-}
-
-void YoloObjectDetector::checkForObjectsActionPreemptCB() {
-  ROS_DEBUG("[YoloObjectDetector] Preempt check for objects action.");
-  checkForObjectsActionServer_->setPreempted();
-}
-
-bool YoloObjectDetector::isCheckingForObjects() const {
-  return (ros::ok() && checkForObjectsActionServer_->isActive() && !checkForObjectsActionServer_->isPreemptRequested());
-}
 
 bool YoloObjectDetector::publishDetectionImage(const cv::Mat& detectionImage) {
   if (detectionImagePublisher_.getNumSubscribers() < 1) return false;
@@ -248,17 +139,6 @@ bool YoloObjectDetector::publishDetectionImage(const cv::Mat& detectionImage) {
 //   return (double) time.tv_sec + (double) time.tv_usec * .000001;
 // }
 
-int YoloObjectDetector::sizeNetwork(network* net) {
-  int i;
-  int count = 0;
-  for (i = 0; i < net->n; ++i) {
-    layer l = net->layers[i];
-    if (l.type == YOLO || l.type == REGION || l.type == DETECTION) {
-      count += l.outputs;
-    }
-  }
-  return count;
-}
 
 void YoloObjectDetector::rememberNetwork(network* net) {
   int i;
@@ -372,7 +252,7 @@ void* YoloObjectDetector::fetchInThread() {
     IplImage* ROS_img = imageAndHeader.image;
     ipl_into_image(ROS_img, buff_[buffIndex_]);
     headerBuff_[buffIndex_] = imageAndHeader.header;
-    buffId_[buffIndex_] = actionId_;
+    //buffId_[buffIndex_] = actionId_;
   }
   rgbgr_image(buff_[buffIndex_]);
   letterbox_image_into(buff_[buffIndex_], net_->w, net_->h, buffLetter_[buffIndex_]);
@@ -412,22 +292,6 @@ void* YoloObjectDetector::detectLoop(void* ptr) {
   }
 }
 
-void YoloObjectDetector::setupNetwork(char* cfgfile, char* weightfile, char* datafile, float thresh, char** names, int classes, int delay,
-                                      char* prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen) {
-  demoPrefix_ = prefix;
-  demoDelay_ = delay;
-  demoFrame_ = avg_frames;
-  image** alphabet = load_alphabet_with_file(datafile);
-  demoNames_ = names;
-  demoAlphabet_ = alphabet;
-  demoClasses_ = classes;
-  demoThresh_ = thresh;
-  demoHier_ = hier;
-  fullScreen_ = fullscreen;
-  printf("YOLO V3\n");
-  net_ = load_network(cfgfile, weightfile, 0);
-  set_batch_network(net_, 1);
-}
 
 void YoloObjectDetector::yolo() {
   const auto wait_duration = std::chrono::milliseconds(2000);
@@ -512,12 +376,6 @@ void YoloObjectDetector::yolo() {
   }
 }
 
-IplImageWithHeader_ YoloObjectDetector::getIplImageWithHeader() {
-  IplImage* ROS_img = new IplImage(camImageCopy_);
-  IplImageWithHeader_ header = {.image = ROS_img, .header = imageHeader_};
-  return header;
-}
-
 bool YoloObjectDetector::getImageStatus(void) {
   boost::shared_lock<boost::shared_mutex> lock(mutexImageStatus_);
   return imageStatus_;
@@ -585,13 +443,7 @@ void* YoloObjectDetector::publishInThread() {
     msg.count = 0;
     objectPublisher_.publish(msg);
   }
-  if (isCheckingForObjects()) {
-    ROS_DEBUG("[YoloObjectDetector] check for objects in image.");
-    darknet_ros_msgs::CheckForObjectsResult objectsActionResult;
-    objectsActionResult.id = buffId_[0];
-    objectsActionResult.bounding_boxes = boundingBoxesResults_;
-    checkForObjectsActionServer_->setSucceeded(objectsActionResult, "Send bounding boxes.");
-  }
+
   boundingBoxesResults_.bounding_boxes.clear();
   for (int i = 0; i < numClasses_; i++) {
     rosBoxes_[i].clear();
