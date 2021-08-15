@@ -236,12 +236,24 @@ void YoloActionServer::fetch() {
 }
 
 detection* YoloActionServer::singlePrediction(network* net, int* nboxes) {
-  int i, j;
   int count = 0;
   fill_cpu(demoTotal_, 0, pred_val_, 1);
+  /* ---------
+  float tot_p = 0;
+  for (int i = 0; i < sizeof(prediction_); ++i)
+    tot_p += prediction_[i];
+  ROS_INFO("Tot pred inside SinglePred: %d %f", sizeof(prediction_), tot_p);
+  */ 
+
+  int i, j;
+  axpy_cpu(demoTotal_, 1. / demoFrame_, prediction_, 1, pred_val_, 1);
+  ROS_INFO("net n  %d", net->n);
+  float tot_p = 0;
+  for (int k = 0; k < sizeof(pred_val_); ++k)
+    tot_p += pred_val_[k];
+  ROS_INFO("Tot pred inside SinglePred: %d %f", sizeof(pred_val_), tot_p);
   
-  axpy_cpu(demoTotal_, 1.0 , prediction_, 1, pred_val_, 1);
-  
+
   for (i = 0; i < net->n; ++i) {
     layer l = net->layers[i];
     if (l.type == YOLO || l.type == REGION || l.type == DETECTION) {
@@ -249,7 +261,9 @@ detection* YoloActionServer::singlePrediction(network* net, int* nboxes) {
       count += l.outputs;
     }
   }
-  detection* dets = get_network_boxes(net, current_img_.w, current_img_.h, demoThresh_, demoHier_, 0, 1, nboxes);
+  ROS_INFO("Count %d", count);
+  ROS_INFO("Sizes w%d h%d", current_img_.w, current_img_.h);
+  detection *dets = get_network_boxes(net, current_img_.w, current_img_.h, demoThresh_, demoHier_, 0, 1, nboxes);
   return dets;
 }
 
@@ -265,26 +279,37 @@ void YoloActionServer::rememberNetwork(network* net) {
   }
 }
 void YoloActionServer::detect() {
-  running_ = 1;
+  //running_ = 1;
   float nms = .4;
 
   layer l = net_->layers[net_->n - 1];
-  float* X = current_img_.data;
-  float* prediction = network_predict(net_, X);
+  float* X = current_letter_.data;
 
+
+  float *prediction = network_predict(net_, X);
+  /*
+  float tot_p=0;
+  for (int i = 0; i < sizeof(prediction); ++i)
+    tot_p += prediction[i];
+  ROS_INFO("Predict: %d : %f", sizeof(prediction), tot_p);
+  */
   rememberNetwork(net_);
   detection* dets = 0;
   int nboxes = 0;
   dets = singlePrediction(net_, &nboxes);
 
   if (nms > 0) do_nms_obj(dets, nboxes, l.classes, nms);
-  
-  ROS_INFO("dets %d",  dets->classes);
 
+  /*
   image display = current_img_;
-
-  //draw_detections(display, dets, nboxes, demoThresh_, demoNames_, demoAlphabet_, demoClasses_);
-
+  char** demoNamesChar = (char**)malloc((demoNames_.size()) * sizeof(char*));
+  for (int i = 0; i < demoNames_.size(); i++)
+  {
+    demoNamesChar[i] = new char[demoNames_[i].length() + 1];
+    strcpy(demoNamesChar[i], demoNames_[i].c_str());
+  }
+  draw_detections(display, dets, nboxes, demoThresh_, demoNamesChar, demoAlphabet_, demoClasses_);
+  */
   // extract the bounding boxes and send them to ROS
   int i, j;
   int count = 0;
@@ -302,6 +327,7 @@ void YoloActionServer::detect() {
     // iterate through possible boxes and collect the bounding boxes
     for (j = 0; j < demoClasses_; ++j) {
       if (dets[i].prob[j]) {
+
         float x_center = (xmin + xmax) / 2;
         float y_center = (ymin + ymax) / 2;
         float BoundingBox_width = xmax - xmin;
