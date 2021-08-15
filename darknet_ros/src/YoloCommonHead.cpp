@@ -24,7 +24,6 @@ YoloCommonHead::~YoloCommonHead(){}
 
 void YoloCommonHead::init()
 {
-  ROS_INFO("Common init");
   // Initialize deep network of darknet.
   std::string weightsPath;
   std::string configPath;

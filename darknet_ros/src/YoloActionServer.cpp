@@ -31,7 +31,6 @@ void YoloActionServer::init()
 {
 	//YoloCommonHead::init();
   
-  ROS_INFO("Darknet_ROS Action Server init");
 	// Action servers.
   std::string checkForObjectsActionName;
   nodeHandle_.param("actions/camera_reading/topic", checkForObjectsActionName, std::string("check_for_objects"));
@@ -173,7 +172,6 @@ void YoloActionServer::checkForObjectsActionGoalCB()
       boost::unique_lock<boost::shared_mutex> lockImageStatus(mutexImageStatus_);
       image_status = ImageStatus::REC;
     }
-    ROS_INFO("[YoloActionServer] Set status to REC."); 
     frameWidth_ = cam_image->image.size().width;
     frameHeight_ = cam_image->image.size().height;
   }
@@ -186,7 +184,7 @@ void YoloActionServer::checkForObjectsActionPreemptCB()
 }
 
 void YoloActionServer::yolo(){
-  ROS_INFO("yolo thread started");
+  ROS_DEBUG("yolo thread started");
   srand(3333333);
 
   demoTotal_ = sizeNetwork(net_);
