@@ -1,10 +1,6 @@
 /*	YoloMultiActionServer Class declaration	*/
 
 /*
-	libs
-*/
-
-/*
  * YoloActionServer.hpp
  *
  *  Created on: August 14, 2021
@@ -37,8 +33,6 @@ namespace darknet_ros {
 class YoloActionServer : public YoloCommonHead
 {
 	public:
-		// constructor -> see example in YoloObjectDetector
-		// destructor -> remember to join all active threads (forcing it with std::terminate if necessary)
 		YoloActionServer(ros::NodeHandle nh);
 		~YoloActionServer();
 
@@ -82,19 +76,9 @@ class YoloActionServer : public YoloCommonHead
 	 	//! Check for objects action server.
   	CheckForObjectsActionServerPtr checkForObjectsActionServer_;
 
-		// redefine inherited
-		// ...
-		
-		// ActionGoal Callback
-		// ActionPreempt Callback
-		// yolo (to run in a thread)
-		// Clock Callback
-
-
 		const uint8_t IMG_BUF_LEN = 16;
 		const float yolo_clock_period = 0.02; // 50Hz
 		ros::Timer yolo_clock;
-		// a clock (which checks, for all images, if they've been eval, in which case it joins their thread)
 
 		int actionId_;
 		boost::shared_mutex mutexActionStatus_;
@@ -120,4 +104,3 @@ class YoloActionServer : public YoloCommonHead
 
 };
 }
-//#endif // YOLOMULTIACTIONSERVER_H
