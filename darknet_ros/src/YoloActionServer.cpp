@@ -206,20 +206,17 @@ void YoloActionServer::yolo(){
   }
   current_letter_ = letterbox_image(current_img_, net_->w, net_->h);
   ipl_ = cvCreateImage(cvSize(current_img_.w, current_img_.h), IPL_DEPTH_8U, current_img_.c);
-  ROS_INFO("to FETCH");
   fetch();
   {
     boost::unique_lock<boost::shared_mutex> lockImageStatus(mutexImageStatus_);
     image_status = ImageStatus::DETECT;
   }
   //display();
-  ROS_INFO("to DETECT");
   detect();
   {
     boost::unique_lock<boost::shared_mutex> lockImageStatus(mutexImageStatus_);
     image_status = ImageStatus::DONE;
   }
-  ROS_INFO("DONE");
 }
 
 void YoloActionServer::fetch() {
@@ -237,22 +234,9 @@ void YoloActionServer::fetch() {
 
 detection* YoloActionServer::singlePrediction(network* net, int* nboxes) {
   int count = 0;
-  fill_cpu(demoTotal_, 0, pred_val_, 1);
-  /* ---------
-  float tot_p = 0;
-  for (int i = 0; i < sizeof(prediction_); ++i)
-    tot_p += prediction_[i];
-  ROS_INFO("Tot pred inside SinglePred: %d %f", sizeof(prediction_), tot_p);
-  */ 
-
   int i, j;
+  fill_cpu(demoTotal_, 0, pred_val_, 1);
   axpy_cpu(demoTotal_, 1. / demoFrame_, prediction_, 1, pred_val_, 1);
-  ROS_INFO("net n  %d", net->n);
-  float tot_p = 0;
-  for (int k = 0; k < sizeof(pred_val_); ++k)
-    tot_p += pred_val_[k];
-  ROS_INFO("Tot pred inside SinglePred: %d %f", sizeof(pred_val_), tot_p);
-  
 
   for (i = 0; i < net->n; ++i) {
     layer l = net->layers[i];
@@ -261,8 +245,6 @@ detection* YoloActionServer::singlePrediction(network* net, int* nboxes) {
       count += l.outputs;
     }
   }
-  ROS_INFO("Count %d", count);
-  ROS_INFO("Sizes w%d h%d", current_img_.w, current_img_.h);
   detection *dets = get_network_boxes(net, current_img_.w, current_img_.h, demoThresh_, demoHier_, 0, 1, nboxes);
   return dets;
 }
@@ -287,12 +269,7 @@ void YoloActionServer::detect() {
 
 
   float *prediction = network_predict(net_, X);
-  /*
-  float tot_p=0;
-  for (int i = 0; i < sizeof(prediction); ++i)
-    tot_p += prediction[i];
-  ROS_INFO("Predict: %d : %f", sizeof(prediction), tot_p);
-  */
+
   rememberNetwork(net_);
   detection* dets = 0;
   int nboxes = 0;
@@ -301,19 +278,11 @@ void YoloActionServer::detect() {
   if (nms > 0) do_nms_obj(dets, nboxes, l.classes, nms);
 
   /*
-  image display = current_img_;
-  char** demoNamesChar = (char**)malloc((demoNames_.size()) * sizeof(char*));
-  for (int i = 0; i < demoNames_.size(); i++)
-  {
-    demoNamesChar[i] = new char[demoNames_[i].length() + 1];
-    strcpy(demoNamesChar[i], demoNames_[i].c_str());
-  }
   draw_detections(display, dets, nboxes, demoThresh_, demoNamesChar, demoAlphabet_, demoClasses_);
   */
   // extract the bounding boxes and send them to ROS
   int i, j;
   int count = 0;
-  ROS_INFO("DemoClasses %d", demoClasses_);
   for (i = 0; i < nboxes; ++i) {
     float xmin = dets[i].bbox.x - dets[i].bbox.w / 2.;
     float xmax = dets[i].bbox.x + dets[i].bbox.w / 2.;
@@ -325,9 +294,6 @@ void YoloActionServer::detect() {
     if (xmax > 1) xmax = 1;
     if (ymax > 1) ymax = 1;
 
-    if (!i%100)
-      ROS_INFO("xmin %f xmax %f ymin %f ymax %f", xmin, xmax, ymin, ymax);
-
     // iterate through possible boxes and collect the bounding boxes
     for (j = 0; j < demoClasses_; ++j) {
       if (dets[i].prob[j]) {
@@ -336,8 +302,6 @@ void YoloActionServer::detect() {
         float y_center = (ymin + ymax) / 2;
         float BoundingBox_width = xmax - xmin;
         float BoundingBox_height = ymax - ymin;
-
-        ROS_INFO("det_class %d", j);
 
         // define bounding box
         // BoundingBox must be 1% size of frame (3.2x2.4 pixels)
@@ -368,17 +332,6 @@ void YoloActionServer::detect() {
   
   return;
 }
-
-
-/* // SENDING IMAGE as RESULT
-  if (isCheckingForObjects()) {
-    ROS_DEBUG("[YoloObjectDetector] check for objects in image.");
-    darknet_ros_msgs::CheckForObjectsResult objectsActionResult;
-    objectsActionResult.id = buffId_[0];
-    objectsActionResult.bounding_boxes = boundingBoxesResults_;
-    checkForObjectsActionServer_->setSucceeded(objectsActionResult, "Send bounding boxes.");
-  }
-	*/
 
 
 void YoloActionServer::display() {

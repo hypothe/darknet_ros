@@ -57,20 +57,14 @@ void YoloCommonHead::init()
   strcpy(data, dataPath.c_str());
 
   // Get classes.
-  //detectionNames = (char**)realloc((void*)detectionNames, (numClasses_ + 1) * sizeof(char*));
-  ROS_INFO("-- Pre reserve --");
   detectionNames.reserve(numClasses_ + 1);
 
   for (int i = 0; i < numClasses_; i++) {
-    //detectionNames[i] = new char[classLabels_[i].length() + 1];
-    //strcpy(detectionNames[i], classLabels_[i].c_str());
     detectionNames.push_back(std::string(classLabels_[i]));
   }
-  ROS_INFO("-- Post strcpy --");
 
   // Load network.
   setupNetwork(cfg, weights, data, thresh, detectionNames, numClasses_, 0, 0, 1, 0.5, 0, 0, 0, 0);
-  //ROS_INFO("-- Post network --");
 
 }
 
