@@ -75,6 +75,7 @@ class YoloActionServer : public YoloCommonHead
 		void detect();
 
 		void publish();
+		void display();
 
 		// ---- MEMBERS ----
 
@@ -100,6 +101,7 @@ class YoloActionServer : public YoloCommonHead
 
 		enum class ImageStatus
 		{
+			REC,
 			FETCH,
 			DETECT,
 			DONE,

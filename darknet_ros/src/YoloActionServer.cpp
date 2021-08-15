@@ -15,13 +15,23 @@ namespace darknet_ros{
 
 YoloActionServer::YoloActionServer(ros::NodeHandle nh)
     : YoloCommonHead(nh), image_status(ImageStatus::NONE) {
+
+  init();
   ROS_INFO("[YoloActionServer] Node started.");
+}
+
+YoloActionServer::~YoloActionServer() {
+  yolo_clock.stop();
+  if (yoloThread_.joinable())
+    yoloThread_.join();
+  checkForObjectsActionServer_->shutdown();
 }
 
 void YoloActionServer::init()
 {
-	YoloCommonHead::init();
-
+	//YoloCommonHead::init();
+  
+  ROS_INFO("Darknet_ROS Action Server init");
 	// Action servers.
   std::string checkForObjectsActionName;
   nodeHandle_.param("actions/camera_reading/topic", checkForObjectsActionName, std::string("check_for_objects"));
@@ -37,32 +47,39 @@ void YoloActionServer::init()
 
 void YoloActionServer::yoloClockCB(const ros::TimerEvent&)
 {
-  if (image_status != ImageStatus::FETCH || image_status != ImageStatus::DONE)
+  ImageStatus tempIS;
+  {
+    boost::shared_lock<boost::shared_mutex> lockImageStatus(mutexImageStatus_);
+    tempIS = image_status;
+  }
+  if (tempIS != ImageStatus::REC && tempIS != ImageStatus::DONE)
     return;
   // - join the previous yolo thread if it's still running
   if (yoloThread_.joinable())
       yoloThread_.join();
 
   // if the current image has tag FETCH
-  if (image_status == ImageStatus::FETCH)
-  {
-    // - set the image status to DETECT
+  if (tempIS == ImageStatus::REC)
+  {    
+    // - launch the yolo thread
     {
       boost::unique_lock<boost::shared_mutex> lockImageStatus(mutexImageStatus_);
-      image_status = ImageStatus::DETECT;
+      image_status = ImageStatus::FETCH;
     }
-    // - launch the yolo thread
     yoloThread_ = std::thread(&YoloActionServer::yolo, this);
   }
   // if the current image has tag DONE
-  else if (image_status == ImageStatus::DONE)
+  else if (tempIS == ImageStatus::DONE)
   {
     // - send the image as a result
-    publish();
     {
       boost::unique_lock<boost::shared_mutex> lockImageStatus(mutexImageStatus_);
-      image_status = ImageStatus::DONE;
+      image_status = ImageStatus::NONE;
     }
+    if (yoloThread_.joinable())
+      yoloThread_.join();
+
+    publish();
   }
   // - set the image status to NONE
 }
@@ -73,7 +90,9 @@ void YoloActionServer::publish() {
 
   // Publish bounding boxes and detection result.
   int num = roiBoxes_[0].num;
-  if (num > 0 && num <= 100) {
+  ROS_INFO("NUM %d", num);
+  if (num > 0 && num <= 100)
+  {
     for (int i = 0; i < num; i++) {
       for (int j = 0; j < numClasses_; j++) {
         if (roiBoxes_[i].Class == j) {
@@ -93,6 +112,7 @@ void YoloActionServer::publish() {
           int ymax = (rosBoxes_[i][j].y + rosBoxes_[i][j].h / 2) * frameHeight_;
 
           boundingBox.Class = classLabels_[i];
+          ROS_INFO("CL %s", classLabels_[i]);
           boundingBox.id = i;
           boundingBox.probability = rosBoxes_[i][j].prob;
           boundingBox.xmin = xmin;
@@ -106,7 +126,9 @@ void YoloActionServer::publish() {
     boundingBoxesResults_.header.stamp = ros::Time::now();
     boundingBoxesResults_.header.frame_id = "detection";
     boundingBoxesResults_.image_header = current_head_;
-  } else {
+  }
+  else
+  {
     darknet_ros_msgs::ObjectCount msg;
     msg.header.stamp = ros::Time::now();
     msg.header.frame_id = "detection";
@@ -128,7 +150,7 @@ void YoloActionServer::publish() {
 
 void YoloActionServer::checkForObjectsActionGoalCB()
 {
-  ROS_INFO("[YoloActionServer] Start check for objects action."); 
+  ROS_INFO("[YoloActionServer] Received goal image."); 
   boost::shared_ptr<const darknet_ros_msgs::CheckForObjectsGoal> imageActionPtr = checkForObjectsActionServer_->acceptNewGoal();
   sensor_msgs::Image imageAction = imageActionPtr->image;
   actionId_ = imageActionPtr->id;
@@ -149,8 +171,9 @@ void YoloActionServer::checkForObjectsActionGoalCB()
     }
     {
       boost::unique_lock<boost::shared_mutex> lockImageStatus(mutexImageStatus_);
-      image_status = ImageStatus::FETCH;
+      image_status = ImageStatus::REC;
     }
+    ROS_INFO("[YoloActionServer] Set status to REC."); 
     frameWidth_ = cam_image->image.size().width;
     frameHeight_ = cam_image->image.size().height;
   }
@@ -163,7 +186,7 @@ void YoloActionServer::checkForObjectsActionPreemptCB()
 }
 
 void YoloActionServer::yolo(){
-
+  ROS_INFO("yolo thread started");
   srand(3333333);
 
   demoTotal_ = sizeNetwork(net_);
@@ -183,17 +206,20 @@ void YoloActionServer::yolo(){
   }
   current_letter_ = letterbox_image(current_img_, net_->w, net_->h);
   ipl_ = cvCreateImage(cvSize(current_img_.w, current_img_.h), IPL_DEPTH_8U, current_img_.c);
-
+  ROS_INFO("to FETCH");
   fetch();
   {
     boost::unique_lock<boost::shared_mutex> lockImageStatus(mutexImageStatus_);
     image_status = ImageStatus::DETECT;
   }
+  //display();
+  ROS_INFO("to DETECT");
   detect();
   {
     boost::unique_lock<boost::shared_mutex> lockImageStatus(mutexImageStatus_);
     image_status = ImageStatus::DONE;
   }
+  ROS_INFO("DONE");
 }
 
 void YoloActionServer::fetch() {
@@ -252,9 +278,12 @@ void YoloActionServer::detect() {
   dets = singlePrediction(net_, &nboxes);
 
   if (nms > 0) do_nms_obj(dets, nboxes, l.classes, nms);
+  
+  ROS_INFO("dets %d",  dets->classes);
 
   image display = current_img_;
-  draw_detections(display, dets, nboxes, demoThresh_, demoNames_, demoAlphabet_, demoClasses_);
+
+  //draw_detections(display, dets, nboxes, demoThresh_, demoNames_, demoAlphabet_, demoClasses_);
 
   // extract the bounding boxes and send them to ROS
   int i, j;
@@ -277,6 +306,8 @@ void YoloActionServer::detect() {
         float y_center = (ymin + ymax) / 2;
         float BoundingBox_width = xmax - xmin;
         float BoundingBox_height = ymax - ymin;
+
+        ROS_INFO("det_class %d", j);
 
         // define bounding box
         // BoundingBox must be 1% size of frame (3.2x2.4 pixels)
@@ -318,4 +349,24 @@ void YoloActionServer::detect() {
     checkForObjectsActionServer_->setSucceeded(objectsActionResult, "Send bounding boxes.");
   }
 	*/
+
+
+void YoloActionServer::display() {
+  show_image_cv(current_img_, "YOLO V3", ipl_);
+  int c = cv::waitKey(3000);
+  if (c != -1) c = c % 256;
+  if (c == 82) {
+    demoThresh_ += .02;
+  } else if (c == 84) {
+    demoThresh_ -= .02;
+    if (demoThresh_ <= .02) demoThresh_ = .02;
+  } else if (c == 83) {
+    demoHier_ += .02;
+  } else if (c == 81) {
+    demoHier_ -= .02;
+    if (demoHier_ <= .0) demoHier_ = .0;
+  }
+  return;
 }
+
+} //namespace darknet_ros

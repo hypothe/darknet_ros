@@ -29,6 +29,7 @@ if (CUDA_FOUND)
     -gencode arch=compute_52,code=[sm_52,compute_52]
     -gencode arch=compute_61,code=sm_61
     -gencode arch=compute_62,code=sm_62
+    -gencode arch=compute_75,code=sm_75
   )
   add_definitions(-DGPU)
 else()
@@ -164,6 +165,10 @@ if (CUDA_FOUND)
     src/yolo_object_detector_node.cpp
   )
 
+  cuda_add_executable(${PROJECT_NAME}_as
+    src/yolo_action_server_node.cpp
+  )
+
   cuda_add_library(${PROJECT_NAME}_nodelet
     src/yolo_object_detector_nodelet.cpp
   )
@@ -176,6 +181,9 @@ else()
 
   add_executable(${PROJECT_NAME}
     src/yolo_object_detector_node.cpp
+  )
+  add_executable(${PROJECT_NAME}_as
+    src/yolo_action_server_node.cpp
   )
 
   add_library(${PROJECT_NAME}_nodelet
@@ -197,6 +205,9 @@ target_link_libraries(${PROJECT_NAME}_lib
 target_link_libraries(${PROJECT_NAME}
   ${PROJECT_NAME}_lib
 )
+target_link_libraries(${PROJECT_NAME}_as
+  ${PROJECT_NAME}_lib
+)
 
 target_link_libraries(${PROJECT_NAME}_nodelet
   ${PROJECT_NAME}_lib
@@ -213,6 +224,10 @@ install(TARGETS ${PROJECT_NAME}_lib
 )
 
 install(TARGETS ${PROJECT_NAME}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(TARGETS ${PROJECT_NAME}_as
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

@@ -192,7 +192,14 @@ void* YoloObjectDetector::detectInThread() {
     printf("Objects:\n\n");
   }
   image display = buff_[(buffIndex_ + 2) % 3];
-  draw_detections(display, dets, nboxes, demoThresh_, demoNames_, demoAlphabet_, demoClasses_);
+  char** demoNamesChar = (char**)malloc((demoNames_.size()) * sizeof(char*));
+  for (int i = 0; i < demoNames_.size(); i++)
+  {
+    demoNamesChar[i] = new char[demoNames_[i].length() + 1];
+    strcpy(demoNamesChar[i], demoNames_[i].c_str());
+  }
+
+  draw_detections(display, dets, nboxes, demoThresh_, demoNamesChar, demoAlphabet_, demoClasses_);
 
   // extract the bounding boxes and send them to ROS
   int i, j;

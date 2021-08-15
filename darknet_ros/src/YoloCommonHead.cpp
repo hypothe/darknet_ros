@@ -24,7 +24,7 @@ YoloCommonHead::~YoloCommonHead(){}
 
 void YoloCommonHead::init()
 {
-	
+  ROS_INFO("Common init");
   // Initialize deep network of darknet.
   std::string weightsPath;
   std::string configPath;
@@ -56,15 +56,22 @@ void YoloCommonHead::init()
   data = new char[dataPath.length() + 1];
   strcpy(data, dataPath.c_str());
 
+  ROS_INFO("-- Pre realloc --");
   // Get classes.
-  detectionNames = (char**)realloc((void*)detectionNames, (numClasses_ + 1) * sizeof(char*));
+  //detectionNames = (char**)realloc((void*)detectionNames, (numClasses_ + 1) * sizeof(char*));
+  detectionNames.reserve(numClasses_ + 1);
+
+  ROS_INFO("-- Post realloc --");
   for (int i = 0; i < numClasses_; i++) {
-    detectionNames[i] = new char[classLabels_[i].length() + 1];
-    strcpy(detectionNames[i], classLabels_[i].c_str());
+    //detectionNames[i] = new char[classLabels_[i].length() + 1];
+    //strcpy(detectionNames[i], classLabels_[i].c_str());
+    detectionNames[i] = std::string(classLabels_[i]);
   }
+  ROS_INFO("-- Post strcpy --");
 
   // Load network.
   setupNetwork(cfg, weights, data, thresh, detectionNames, numClasses_, 0, 0, 1, 0.5, 0, 0, 0, 0);
+  //ROS_INFO("-- Post network --");
 
 }
 
@@ -80,7 +87,7 @@ bool YoloCommonHead::readParameters() {
 }
 
 
-void YoloCommonHead::setupNetwork(char* cfgfile, char* weightfile, char* datafile, float thresh, char** names, int classes, int delay,
+void YoloCommonHead::setupNetwork(char* cfgfile, char* weightfile, char* datafile, float thresh, std::vector<std::string> names, int classes, int delay,
                                       char* prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen) {
   demoPrefix_ = prefix;
   demoDelay_ = delay;
@@ -114,5 +121,6 @@ IplImageWithHeader_ YoloCommonHead::getIplImageWithHeader() {
   IplImageWithHeader_ header = {.image = ROS_img, .header = imageHeader_};
   return header;
 }
+
 
 }

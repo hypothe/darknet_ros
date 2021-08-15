@@ -103,7 +103,7 @@ class YoloCommonHead
 
     virtual void rememberNetwork(network* net) = 0;
     
-    void setupNetwork(char* cfgfile, char* weightfile, char* datafile, float thresh, char** names, int classes, int delay, char* prefix,
+    void setupNetwork(char* cfgfile, char* weightfile, char* datafile, float thresh, std::vector<std::string> names, int classes, int delay, char* prefix,
                       int avg_frames, float hier, int w, int h, int frames, int fullscreen);
 
     virtual void yolo() = 0;
@@ -133,7 +133,7 @@ class YoloCommonHead
     int frameHeight_;
     
     // Darknet.
-    char** demoNames_;
+    std::vector<std::string> demoNames_;
     image** demoAlphabet_;
     int demoClasses_;
 
@@ -154,7 +154,7 @@ class YoloCommonHead
     char* cfg;
     char* weights;
     char* data;
-    char** detectionNames;
+    std::vector<std::string> detectionNames;
 
 
     int fullScreen_;
