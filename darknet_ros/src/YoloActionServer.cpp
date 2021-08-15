@@ -89,7 +89,6 @@ void YoloActionServer::publish() {
 
   // Publish bounding boxes and detection result.
   int num = roiBoxes_[0].num;
-  ROS_INFO("NUM %d", num);
   if (num > 0 && num <= 100)
   {
     for (int i = 0; i < num; i++) {
@@ -111,7 +110,6 @@ void YoloActionServer::publish() {
           int ymax = (rosBoxes_[i][j].y + rosBoxes_[i][j].h / 2) * frameHeight_;
 
           boundingBox.Class = classLabels_[i];
-          ROS_INFO("CL %s", classLabels_[i].c_str());
           boundingBox.id = i;
           boundingBox.probability = rosBoxes_[i][j].prob;
           boundingBox.xmin = xmin;
