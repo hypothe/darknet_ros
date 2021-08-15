@@ -13,10 +13,10 @@
   <arg name="network_param_file"         default="$(find darknet_ros)/config/yolov2-tiny.yaml"/>
 
   <!-- Load parameters -->
-  <rosparam command="load" ns="darknet_ros" file="$(arg ros_param_file)"/>
-  <rosparam command="load" ns="darknet_ros" file="$(arg network_param_file)"/>
+  <rosparam command="load" ns="darknet_ros_as" file="$(arg ros_param_file)"/>
+  <rosparam command="load" ns="darknet_ros_as" file="$(arg network_param_file)"/>
 
-  <!-- Start darknet and ros wrapper -->
+  <!-- Start darknet action server and ros wrapper -->
   <node pkg="darknet_ros" type="darknet_ros_as" name="darknet_ros_as" output="screen" launch-prefix="$(arg launch_prefix)">
     <param name="weights_path"          value="$(arg yolo_weights_path)" />
     <param name="config_path"           value="$(arg yolo_config_path)" />

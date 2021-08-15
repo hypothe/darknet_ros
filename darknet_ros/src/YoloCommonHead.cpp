@@ -56,16 +56,15 @@ void YoloCommonHead::init()
   data = new char[dataPath.length() + 1];
   strcpy(data, dataPath.c_str());
 
-  ROS_INFO("-- Pre realloc --");
   // Get classes.
   //detectionNames = (char**)realloc((void*)detectionNames, (numClasses_ + 1) * sizeof(char*));
+  ROS_INFO("-- Pre reserve --");
   detectionNames.reserve(numClasses_ + 1);
 
-  ROS_INFO("-- Post realloc --");
   for (int i = 0; i < numClasses_; i++) {
     //detectionNames[i] = new char[classLabels_[i].length() + 1];
     //strcpy(detectionNames[i], classLabels_[i].c_str());
-    detectionNames[i] = std::string(classLabels_[i]);
+    detectionNames.push_back(std::string(classLabels_[i]));
   }
   ROS_INFO("-- Post strcpy --");
 

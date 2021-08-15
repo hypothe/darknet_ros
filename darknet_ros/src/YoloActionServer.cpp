@@ -112,7 +112,7 @@ void YoloActionServer::publish() {
           int ymax = (rosBoxes_[i][j].y + rosBoxes_[i][j].h / 2) * frameHeight_;
 
           boundingBox.Class = classLabels_[i];
-          ROS_INFO("CL %s", classLabels_[i]);
+          ROS_INFO("CL %s", classLabels_[i].c_str());
           boundingBox.id = i;
           boundingBox.probability = rosBoxes_[i][j].prob;
           boundingBox.xmin = xmin;
@@ -313,6 +313,7 @@ void YoloActionServer::detect() {
   // extract the bounding boxes and send them to ROS
   int i, j;
   int count = 0;
+  ROS_INFO("DemoClasses %d", demoClasses_);
   for (i = 0; i < nboxes; ++i) {
     float xmin = dets[i].bbox.x - dets[i].bbox.w / 2.;
     float xmax = dets[i].bbox.x + dets[i].bbox.w / 2.;
@@ -323,6 +324,9 @@ void YoloActionServer::detect() {
     if (ymin < 0) ymin = 0;
     if (xmax > 1) xmax = 1;
     if (ymax > 1) ymax = 1;
+
+    if (!i%100)
+      ROS_INFO("xmin %f xmax %f ymin %f ymax %f", xmin, xmax, ymin, ymax);
 
     // iterate through possible boxes and collect the bounding boxes
     for (j = 0; j < demoClasses_; ++j) {
