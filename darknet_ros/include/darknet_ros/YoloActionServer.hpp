@@ -1,5 +1,3 @@
-/*	YoloMultiActionServer Class declaration	*/
-
 /*
  * YoloActionServer.hpp
  *

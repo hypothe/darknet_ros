@@ -4,6 +4,11 @@
  *  Created on: Dec 19, 2016
  *      Author: Marko Bjelonic
  *   Institute: ETH Zurich, Robotic Systems Lab
+ * 
+ * Modified by:
+ *  Edited on: August 15, 2021
+ *      Edited by: Marco Gabriele Fedozzi
+ *   Institute: University of Genoa, MSc Robotics Engineering
  */
 
 #pragma once

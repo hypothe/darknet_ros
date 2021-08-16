@@ -1,5 +1,10 @@
-/*	YoloMultiActionServer Class definition	*/
-
+/*
+ * YoloActionServer.cpp
+ *
+ *  Created on: August 14, 2021
+ *      Author: Marco Gabriele Fedozzi
+ *   Institute: University of Genoa, MSc Robotics Engineering
+ */
 #include "darknet_ros/YoloActionServer.hpp"
 
 /*

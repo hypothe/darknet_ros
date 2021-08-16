@@ -1,5 +1,12 @@
-#include "darknet_ros/YoloCommonHead.hpp"
+/*
+ * YoloCommonHead.cpp
+ *
+ *  Created on: August 14, 2021
+ *      Author: Marco Gabriele Fedozzi
+ *   Institute: University of Genoa, MSc Robotics Engineering
+ */
 
+#include "darknet_ros/YoloCommonHead.hpp"
 
 #ifdef DARKNET_FILE_PATH
 std::string darknetFilePath_ = DARKNET_FILE_PATH;

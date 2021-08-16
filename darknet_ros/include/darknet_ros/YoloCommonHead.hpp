@@ -1,3 +1,11 @@
+/*
+ * YoloCommonHead.hpp
+ *
+ *  Created on: August 14, 2021
+ *      Author: Marco Gabriele Fedozzi
+ *   Institute: University of Genoa, MSc Robotics Engineering
+ */
+
 #pragma once
 #ifndef YOLO_COMMON_HEAD_H
 #define YOLO_COMMON_HEAD_H
@@ -93,11 +101,7 @@ class YoloCommonHead
     /*!
     * Initialize the ROS connections.
     */
-    void init();  //-> shared by all classes as is
-    // call it there with typecasting:
-    //  ...
-    //  std::static_cast<YoloCommonHeadPtr>(this)->init()
-    //  extra stuff
+    void init(); 
 
     int sizeNetwork(network* net);
 
