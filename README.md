@@ -10,6 +10,7 @@ To achieve this, the content of the original node has been split into two separa
 The code presented is very minimalistic, probably unoptimized and hopefully safe from crashes. But it gets the job done, and that's enough for how I'm gonna use it.
 It's based on the `melodic` branch of the original repo from `legged_robotics`.
 > WARN: the `yolo_object_detector_node` has not undergo under full testing yet, as it's not in the immediate roadmap of things I've to do with the code.
+
 > NOTE: there's a minor addition to the `CMakeLists.txt` which allows for this to correctly build when launching `catkin_make` or `catkin build` from a **Docker Image** while building a **Dockerfile** using CUDA Toolkit over a system with `nvidia-container-runtime` support (basically adding the cuda-stubs library to the lib list).
 
 ## Usage
