@@ -92,6 +92,12 @@ void YoloObjectDetector::init() {
   detectionImagePublisher_ =
       nodeHandle_.advertise<sensor_msgs::Image>(detectionImageTopicName, detectionImageQueueSize, detectionImageLatch);
 
+  demoNamesChar = (char**)malloc((demoNames_.size()) * sizeof(char*));
+  for (int i = 0; i < demoNames_.size(); i++)
+  {
+    demoNamesChar[i] = new char[demoNames_[i].length() + 1];
+    strcpy(demoNamesChar[i], demoNames_[i].c_str());
+  }
 }
 
 void YoloObjectDetector::cameraCallback(const sensor_msgs::ImageConstPtr& msg) {
@@ -197,12 +203,6 @@ void* YoloObjectDetector::detectInThread() {
     printf("Objects:\n\n");
   }
   image display = buff_[(buffIndex_ + 2) % 3];
-  char** demoNamesChar = (char**)malloc((demoNames_.size()) * sizeof(char*));
-  for (int i = 0; i < demoNames_.size(); i++)
-  {
-    demoNamesChar[i] = new char[demoNames_[i].length() + 1];
-    strcpy(demoNamesChar[i], demoNames_[i].c_str());
-  }
 
   draw_detections(display, dets, nboxes, demoThresh_, demoNamesChar, demoAlphabet_, demoClasses_);
 

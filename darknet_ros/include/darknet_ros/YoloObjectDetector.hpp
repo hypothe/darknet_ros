@@ -90,6 +90,7 @@ class YoloObjectDetector : public YoloCommonHead {
   int buffId_[3];
   int buffIndex_ = 0;
 
+  char **demoNamesChar;
   float** predictions_;
   int demoIndex_ = 0;
   int demoDone_ = 0;

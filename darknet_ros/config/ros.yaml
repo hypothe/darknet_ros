@@ -7,7 +7,7 @@ subscribers:
 actions:
 
   camera_reading:
-    name: /darknet_ros/check_for_objects
+    name: /darknet_ros_as/check_for_objects
 
 publishers:
 

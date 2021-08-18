@@ -93,6 +93,7 @@ void YoloCommonHead::setupNetwork(char* cfgfile, char* weightfile, char* datafil
   demoFrame_ = avg_frames;
   image** alphabet = load_alphabet_with_file(datafile);
   demoNames_ = names;
+  
   demoAlphabet_ = alphabet;
   demoClasses_ = classes;
   demoThresh_ = thresh;

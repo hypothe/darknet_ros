@@ -138,7 +138,7 @@ class YoloCommonHead
     
     // Darknet.
     std::vector<std::string> demoNames_;
-    image** demoAlphabet_;
+    image **demoAlphabet_;
     int demoClasses_;
 
     network* net_;
