@@ -1,3 +1,37 @@
+# Content of this fork
+
+> TLDR: Melodic based Action Server for individual image detection queries.
+
+This fork is intended for those who need a ROS Action Server based on YOLOv3 for simple queries of one image at a time, without the need for yolo to continuously run in the background on a camera feed.
+To achieve this, the content of the original node has been split into two separate nodes:
+- one continuously running yolo on a camera feed, with the original publisher and subscriber (`yolo_object_detector_node`)
+- the other only running yolo on demand, as a result of a goal request, only on the image passed in the `goal` field (`yolo_action_Server_node`)
+
+The code presented is very minimalistic, probably unoptimized and hopefully safe from crashes. But it gets the job done, and that's enough for how I'm gonna use it.
+It's based on the `melodic` branch of the original repo from `legged_robotics`.
+> WARN: the `yolo_object_detector_node` has not undergo under full testing yet, as it's not in the immediate roadmap of things I've to do with the code.
+
+> NOTE: there's a minor addition to the `CMakeLists.txt` which allows for this to correctly build when launching `catkin_make` or `catkin build` from a **Docker Image** while building a **Dockerfile** using CUDA Toolkit over a system with `nvidia-container-runtime` support (basically adding the cuda-stubs library to the lib list).
+
+## Usage
+
+The new node can be launched with
+```bash
+roslaunch darknet_ros darknet_ros_as.launch
+```
+The Action Server is queried as per the original repo, with the difference of its name being `darknet_ros_as` instead of `darknet_ros`.
+The topics are thus the following:
+```bash
+darknet_ros_as/check_for_objects/goal
+darknet_ros_as/check_for_objects/cancel
+darknet_ros_as/check_for_objects/status
+darknet_ros_as/check_for_objects/feedback
+darknet_ros_as/check_for_objects/result
+```
+The action itself is the same one used originally (see later on).
+
+Tested on [**Ubuntu18.04**, **ROS Melodic**, **Docker 20.10**, **CUDA Version 10.2**, **NVIDIA Drivers v 471.21**].
+
 # YOLO ROS: Real-Time Object Detection for ROS
 
 ## Overview
