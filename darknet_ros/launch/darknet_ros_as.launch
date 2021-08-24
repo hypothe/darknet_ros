@@ -4,6 +4,12 @@
   <!-- Console launch prefix -->
   <arg name="launch_prefix" default=""/>
 
+  <!-- Launch parameters -->
+  <arg name="output" default="screen"/>
+	<arg name="required" default="true"/>
+	<arg name="respawn" default="false"/>
+	<arg name="node_args" default=""/>
+
   <!-- Config and weights folder. -->
   <arg name="yolo_weights_path"          default="$(find darknet_ros)/yolo_network_config/weights"/>
   <arg name="yolo_config_path"           default="$(find darknet_ros)/yolo_network_config/cfg"/>
@@ -17,7 +23,8 @@
   <rosparam command="load" ns="darknet_ros_as" file="$(arg network_param_file)"/>
 
   <!-- Start darknet action server and ros wrapper -->
-  <node pkg="darknet_ros" type="darknet_ros_as" name="darknet_ros_as" output="screen" launch-prefix="$(arg launch_prefix)">
+  <node pkg="darknet_ros" type="darknet_ros_as" name="darknet_ros_as" output="$(arg output)" launch-prefix="$(arg launch_prefix)"
+    required="$(arg required)" respawn="$(arg respawn)" args="$(arg node_args)">
     <param name="weights_path"          value="$(arg yolo_weights_path)" />
     <param name="config_path"           value="$(arg yolo_config_path)" />
   </node>
